@@ -11,69 +11,68 @@ namespace ControleMedicamentos.Infra.BancoDados.ModuloFornecedor
 {
     public class RepositorioFornecedorEmBancoDados
     {
-        private string enderecoBanco =
+        private string enderecobanco =
          @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=master;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
 
         private const string sqlInserir =
-           @"INSERT INTO 
-                TBFORNECEDOR
-                    (
-                        NOME,
-                        TELEFONE,
-                        EMAIL,
-                        CIDADE,
-                        ESTADO
-                    )
-                        VALUES
-                    (
-                        @NOME,
-                        @TELEFONE,
-                        @EMAIL,
-                        @CIDADE,
-                        @ESTADO
-                    ); SELECT SCOPE_IDENTITY();";
+            @" USE MEDICAMENTOSDB;
+            INSERT INTO [TBFORNECEDOR]
+            (
+                [NOME],
+                [TELEFONE],
+                [EMAIL],
+                [CIDADE],
+                [ESTADO]
+            )
+            VALUES
+        
+            (
+                @NOME,
+                @TELEFONE,
+                @EMAIL,
+                @CIDADE,
+                @ESTADO
+            ); SELECT SCOPE_IDENTITY();";
 
         private const string sqlEditar =
-            @"UPDATE
-                TBFORNECEDOR
-                    SET
-                        NOME = @NOME,
-                        TELEFONE = @TELEFONE,
-                        EMAIL = @EMAIL,
-                        CIDADE = @CIDADE,
-                        ESTADO = @ESTADO
-                    WHERE
-                        ID = @ID";
+            @" UPDATE [TBFORNECEDOR]
+               SET 
+                    [NOME] = @NOME,
+                    [TELEFONE] = @TELEFONE,
+                    [EMAIL] = @EMAIL,
+                    [CIDADE] = @CIDADE,
+                    [ESTADO] = @ESTADO,
+                WHERE [ID] = @ID";
 
         private const string sqlExcluir =
-            @"DELETE FROM
-                TBFORNECEDOR
-                    WHERE
-                        ID = @ID";
-
-        private const string sqlSelecionarPorId =
-            @"SELECT
-                    ID,
-                    NOME,
-                    TELEFONE,
-                    EMAIL,
-                    CIDADE,
-                    ESTADO
-                FROM
-                    TBFORNECEDOR
-                WHERE
-                    ID = @ID";
+            @"DELETE FROM [TBFORNECEDOR]
+                WHERE [ID] = @ID";
 
         private const string sqlSelecionarTodos =
-            @"SELECT
-                    ID,
-                    NOME,
-                    TELEFONE,
-                    EMAIL,
-                    CIDADE,
-                    ESTADO
-                FROM
-                    TBFORNECEDOR";
+             @"SELECT 
+                    [ID],
+		            [NOME],
+                    [TELEFONE],
+                    [EMAIL],
+                    [CIDADE],
+                    [ESTADO],
+ 
+	            FROM 
+                    [TBFORNECEDOR] ";
+
+        private const string sqlSelecionarPorID =
+             @"SELECT 
+					    [ID],
+					    [NOME],
+					    [EMAIL],
+					    [ESTADO],
+                        [CIDADE] ,
+					    [TELEFONE] 
+	            FROM 
+                    [TBFORNECEDOR]
+		        WHERE
+                    [ID] = @ID";
+
 
         public ValidationResult Inserir(Fornecedor novoFornecedor)
         {
@@ -83,36 +82,55 @@ namespace ControleMedicamentos.Infra.BancoDados.ModuloFornecedor
 
             if (!resultadoValidacao.IsValid)
                 return resultadoValidacao;
+            SqlConnection conexaoBanco = new(enderecobanco);
+            SqlCommand comandoInsersao = new(sqlInserir, conexaoBanco);
 
-            SqlConnection conexaoComBanco = new SqlConnection(enderecoBanco);
+            ConfigurarParametrosFornecedor(novoFornecedor, comandoInsersao);
 
-            SqlCommand comandoInsercao = new SqlCommand(sqlInserir, conexaoComBanco);
+            conexaoBanco.Open();
+            var id = comandoInsersao.ExecuteScalar();
+            novoFornecedor.Numero = Convert.ToInt32(id);
 
-            ConfigurarParametrosFornecedor(novoFornecedor, comandoInsercao);
+            conexaoBanco.Close();
+
+            return resultadoValidacao;
+        }
+
+        public ValidationResult Excluir(Fornecedor fornecedorExcluir)
+        {
+            SqlConnection conexaoComBanco = new(enderecobanco);
+
+            SqlCommand comandoExclusao = new(sqlExcluir, conexaoComBanco);
+
+            comandoExclusao.Parameters.AddWithValue("NUMERO", fornecedorExcluir.Numero);
 
             conexaoComBanco.Open();
-            var id = comandoInsercao.ExecuteScalar();
-            novoFornecedor.Numero = Convert.ToInt32(id);
+            int numeroRegistrosExcluidos = comandoExclusao.ExecuteNonQuery();
+
+            var resultadoValidacao = new ValidationResult();
+
+            if (numeroRegistrosExcluidos == 0)
+                resultadoValidacao.Errors.Add(new ValidationFailure("", "Não foi possível remover o registro"));
 
             conexaoComBanco.Close();
 
             return resultadoValidacao;
         }
 
-        public ValidationResult Editar(Fornecedor fornecedor)
+        public ValidationResult Editar(Fornecedor fornecedorEditar)
         {
             var validador = new ValidadorFornecedor();
 
-            var resultadoValidacao = validador.Validate(fornecedor);
+            var resultadoValidacao = validador.Validate(fornecedorEditar);
 
-            if (!resultadoValidacao.IsValid)
+            if (resultadoValidacao.IsValid == false)
                 return resultadoValidacao;
 
-            SqlConnection conexaoComBanco = new SqlConnection(enderecoBanco);
+            SqlConnection conexaoComBanco = new(enderecobanco);
 
-            SqlCommand comandoEdicao = new SqlCommand(sqlEditar, conexaoComBanco);
+            SqlCommand comandoEdicao = new(sqlEditar, conexaoComBanco);
 
-            ConfigurarParametrosFornecedor(fornecedor, comandoEdicao);
+            ConfigurarParametrosFornecedor(fornecedorEditar, comandoEdicao);
 
             conexaoComBanco.Open();
             comandoEdicao.ExecuteNonQuery();
@@ -123,85 +141,81 @@ namespace ControleMedicamentos.Infra.BancoDados.ModuloFornecedor
 
         public List<Fornecedor> SelecionarTodos()
         {
-            SqlConnection conexaoComBanco = new SqlConnection(enderecoBanco);
+            SqlConnection conexaoComBanco = new(enderecobanco);
 
-            SqlCommand comandoSelecao = new SqlCommand(sqlSelecionarTodos, conexaoComBanco);
-            conexaoComBanco.Open();
-
-            SqlDataReader leitorFornecedor = comandoSelecao.ExecuteReader();
-
-            List<Fornecedor> fornecedores = new List<Fornecedor>();
-
-            while (leitorFornecedor.Read())
-                fornecedores.Add(ConverterParaFornecedor(leitorFornecedor));
-
-            conexaoComBanco.Close();
-
-            return fornecedores;
-        }
-
-        public void Excluir(Fornecedor fornecedor)
-        {
-            SqlConnection conexaoComBanco = new SqlConnection(enderecoBanco);
-
-            SqlCommand comandoExclusao = new SqlCommand(sqlExcluir, conexaoComBanco);
-
-            comandoExclusao.Parameters.AddWithValue("ID", fornecedor.Numero);
+            SqlCommand comandoSelecao = new(sqlSelecionarTodos, conexaoComBanco);
 
             conexaoComBanco.Open();
-            comandoExclusao.ExecuteNonQuery();
-            conexaoComBanco.Close();
-        }
+            SqlDataReader leitorRegistro = comandoSelecao.ExecuteReader();
 
-        public Fornecedor SelecionarPorId(int id)
-        {
-            SqlConnection conexaoComBanco = new SqlConnection(enderecoBanco);
+            List<Fornecedor> registros = new List<Fornecedor>();
 
-            SqlCommand comandoSelecao = new SqlCommand(sqlSelecionarPorId, conexaoComBanco);
-
-            comandoSelecao.Parameters.AddWithValue("ID", id);
-
-            conexaoComBanco.Open();
-
-            SqlDataReader leitorFornecedor = comandoSelecao.ExecuteReader();
-
-            Fornecedor fornecedor = null;
-            if (leitorFornecedor.Read())
-                fornecedor = ConverterParaFornecedor(leitorFornecedor);
-
-            conexaoComBanco.Close();
-
-            return fornecedor;
-        }
-
-        private Fornecedor ConverterParaFornecedor(SqlDataReader leitorFornecedor)
-        {
-            int id = Convert.ToInt32(leitorFornecedor["ID"]);
-            string nome = leitorFornecedor["NOME"].ToString();
-            string telefone = leitorFornecedor["TELEFONE"].ToString();
-            string email = leitorFornecedor["EMAIL"].ToString();
-            string cidade = leitorFornecedor["CIDADE"].ToString();
-            string estado = leitorFornecedor["ESTADO"].ToString();
-
-            return new Fornecedor
+            while (leitorRegistro.Read())
             {
-                Numero = id,
-                Nome = nome,
-                Telefone = telefone,
-                Email = email,
-                Cidade = cidade,
-                Estado = estado
-            };
+                Fornecedor registro = ConverterParaRegistro(leitorRegistro);
+
+                registros.Add(registro);
+            }
+
+            conexaoComBanco.Close();
+
+
+            return registros;
         }
 
-        private void ConfigurarParametrosFornecedor(Fornecedor novoFornecedor, SqlCommand comando)
+        public Fornecedor SelecionarPorID(int ID)
         {
-            comando.Parameters.AddWithValue("@ID", novoFornecedor.Numero);
+            SqlConnection conexaoComBanco = new SqlConnection(enderecobanco);
+
+            SqlCommand comandoSelecao = new SqlCommand(sqlSelecionarPorID, conexaoComBanco);
+
+            comandoSelecao.Parameters.AddWithValue("ID", ID);
+
+            conexaoComBanco.Open();
+            SqlDataReader leitorRegistro = comandoSelecao.ExecuteReader();
+
+            Fornecedor registro = null;
+            if (leitorRegistro.Read())
+                registro = ConverterParaRegistro(leitorRegistro);
+
+            conexaoComBanco.Close();
+
+            return registro;
+        }
+
+        private Fornecedor ConverterParaRegistro(SqlDataReader leitorRegistro)
+        {
+
+
+
+            int id = Convert.ToInt32(leitorRegistro["ID"]);
+            string nomeFornecedor = Convert.ToString(leitorRegistro["NOME"]);
+            string email = Convert.ToString(leitorRegistro["EMAIL"]);
+            string estado = Convert.ToString(leitorRegistro["ESTADO"]);
+            string cidade = Convert.ToString(leitorRegistro["CIDADE"]);
+            string telefone = Convert.ToString(leitorRegistro["TELEFONE"]);
+
+
+
+
+            var registro = new Fornecedor(nomeFornecedor, telefone, email, cidade, estado);
+            registro.Numero = id;
+
+
+
+            return registro;
+        }
+
+        private static void ConfigurarParametrosFornecedor(Fornecedor novoFornecedor, SqlCommand comando)
+        {
+            comando.Parameters.AddWithValue("@NUMERO", novoFornecedor.Numero);
             comando.Parameters.AddWithValue("@NOME", novoFornecedor.Nome);
             comando.Parameters.AddWithValue("@TELEFONE", novoFornecedor.Telefone);
             comando.Parameters.AddWithValue("@EMAIL", novoFornecedor.Email);
             comando.Parameters.AddWithValue("@CIDADE", novoFornecedor.Cidade);
             comando.Parameters.AddWithValue("@ESTADO", novoFornecedor.Estado);
+
         }
     }
 }
+

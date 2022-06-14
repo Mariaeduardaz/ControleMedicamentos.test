@@ -2,15 +2,6 @@
 {
     public class Fornecedor : EntidadeBase<Fornecedor>
     {
-        public string Nome { get; set; }
-        public string Telefone { get; set; }
-        public string Email { get; set; }
-        public string Cidade { get; set; }
-        public string Estado { get; set; }
-        public Fornecedor()
-        {
-
-        }
         public Fornecedor(string nome, string telefone, string email, string cidade, string estado)
         {
             Nome = nome;
@@ -19,6 +10,13 @@
             Cidade = cidade;
             Estado = estado;
         }
+
+        public string Nome { get; set; }
+        public string Telefone { get; set; }
+        public string Email { get; set; }
+        public string Cidade { get; set; }
+        public string Estado { get; set; }
+
         public override bool Equals(object obj)
         {
             return obj is Fornecedor fornecedor &&
@@ -29,9 +27,8 @@
                    Cidade == fornecedor.Cidade &&
                    Estado == fornecedor.Estado;
         }
+
     }
-
-
 
 }
 

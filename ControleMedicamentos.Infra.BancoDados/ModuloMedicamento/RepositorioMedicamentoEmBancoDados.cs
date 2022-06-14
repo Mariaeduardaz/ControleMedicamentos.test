@@ -1,4 +1,6 @@
-﻿using ControleMedicamentos.Dominio.ModuloMedicamento;
+﻿using ControleMedicamentos.Dominio.ModuloFornecedor;
+using ControleMedicamentos.Dominio.ModuloMedicamento;
+
 using FluentValidation.Results;
 using System;
 using System.Collections.Generic;
@@ -8,10 +10,10 @@ namespace ControleMedicamento.Infra.BancoDados.ModuloMedicamento
 {
     public class RepositorioMedicamentoEmBancoDados
     {
-        private const string enderecoBanco = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=master;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+        private const string enderecobanco = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=master;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
 
         private const string sqlInserir =
-            @" USE MEDICAMENTOSDB;
+           @" USE MEDICAMENTOSDB;
             INSERT INTO [TBMEDICAMENTO]
             (
                 [NOME],
@@ -98,7 +100,7 @@ namespace ControleMedicamento.Infra.BancoDados.ModuloMedicamento
 
             if (!resultadoValidacao.IsValid)
                 return resultadoValidacao;
-            SqlConnection conexaoBanco = new(enderecoBanco);
+            SqlConnection conexaoBanco = new(enderecobanco);
             SqlCommand comandoInsersao = new(sqlInserir, conexaoBanco);
 
             ConfigurarParametrosMedicamentos(novoMedicamento, comandoInsersao);
@@ -114,7 +116,7 @@ namespace ControleMedicamento.Infra.BancoDados.ModuloMedicamento
 
         public ValidationResult Excluir(Medicamento medicamentoExcluir)
         {
-            SqlConnection conexaoComBanco = new(enderecoBanco);
+            SqlConnection conexaoComBanco = new(enderecobanco);
 
             SqlCommand comandoExclusao = new(sqlExcluir, conexaoComBanco);
 
@@ -142,7 +144,7 @@ namespace ControleMedicamento.Infra.BancoDados.ModuloMedicamento
             if (resultadoValidacao.IsValid == false)
                 return resultadoValidacao;
 
-            SqlConnection conexaoComBanco = new(enderecoBanco);
+            SqlConnection conexaoComBanco = new(enderecobanco);
 
             SqlCommand comandoEdicao = new(sqlEditar, conexaoComBanco);
 
@@ -157,7 +159,7 @@ namespace ControleMedicamento.Infra.BancoDados.ModuloMedicamento
 
         public List<Medicamento> SelecionarTodos()
         {
-            SqlConnection conexaoComBanco = new(enderecoBanco);
+            SqlConnection conexaoComBanco = new(enderecobanco);
 
             SqlCommand comandoSelecao = new(sqlSelecionarTodos, conexaoComBanco);
 
@@ -169,6 +171,58 @@ namespace ControleMedicamento.Infra.BancoDados.ModuloMedicamento
 
             return medicamentos;
         }
+        public Medicamento SelecionarPorID(int ID)
+        {
+            SqlConnection conexaoComBanco = new SqlConnection(enderecobanco);
+
+            SqlCommand comandoSelecao = new SqlCommand(sqlSelecionarPorID, conexaoComBanco);
+
+            comandoSelecao.Parameters.AddWithValue("ID", ID);
+
+            conexaoComBanco.Open();
+            SqlDataReader leitorRegistro = comandoSelecao.ExecuteReader();
+
+            Medicamento registro = null;
+            if (leitorRegistro.Read())
+                registro = ConverterParaRegistro(leitorRegistro);
+
+            conexaoComBanco.Close();
+
+            return registro;
+        }
+
+        private Medicamento ConverterParaRegistro(SqlDataReader leitorRegistro)
+        {
+
+            int Id = Convert.ToInt32(leitorRegistro["ID"]);
+            string nome = Convert.ToString(leitorRegistro["NOME"]);
+            string descricao = Convert.ToString(leitorRegistro["DESCRICAO"]);
+            string lote = Convert.ToString(leitorRegistro["LOTE"]);
+            DateTime validade = Convert.ToDateTime(leitorRegistro["VALIDADE"]).Date;
+            int quantidade = Convert.ToInt32(leitorRegistro["QUANTIDADE"]);
+
+
+            int idFornecedor = Convert.ToInt32(leitorRegistro["FORNECEDOR_ID"]);
+            string nomeFornecedor = Convert.ToString(leitorRegistro["FORNECEDOR_NOME"]);
+            string email = Convert.ToString(leitorRegistro["FORNECEDOR_EMAIL"]);
+            string estado = Convert.ToString(leitorRegistro["FORNECEDOR_ESTADO"]);
+            string cidade = Convert.ToString(leitorRegistro["FORNECEDOR_CIDADE"]);
+            string telefone = Convert.ToString(leitorRegistro["FORNECEDOR_TELEFONE"]);
+
+
+
+
+            var fornecedor = new Fornecedor(nomeFornecedor, telefone, email, cidade, estado);
+            fornecedor.Numero = idFornecedor;
+
+            var registro = new Medicamento(nome, descricao, lote, validade);
+            registro.Numero = Id;
+            registro.Fornecedor = fornecedor;
+            registro.QuantidadeDisponivel = quantidade;
+
+            return registro;
+        }
+
         private static void ConfigurarParametrosMedicamentos(Medicamento novoMedicamendo, SqlCommand comando)
         {
             comando.Parameters.AddWithValue("@ID", novoMedicamendo.Numero);
@@ -180,6 +234,8 @@ namespace ControleMedicamento.Infra.BancoDados.ModuloMedicamento
             comando.Parameters.AddWithValue("@FORNECEDOR_ID", novoMedicamendo.Fornecedor.Numero);
         }
     }
+
 }
+
 
 

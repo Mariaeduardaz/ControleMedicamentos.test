@@ -6,8 +6,9 @@ namespace ControleMedicamentos.Dominio.Tests.ModuloMedicamento
     public class MedicamentoTest
     {
         [TestMethod]
-        public void TestMethod1()
+        public void deev()
         {
+
         }
     }
 }
