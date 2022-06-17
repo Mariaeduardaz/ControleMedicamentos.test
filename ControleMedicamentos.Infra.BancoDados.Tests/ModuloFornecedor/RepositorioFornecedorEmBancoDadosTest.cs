@@ -24,5 +24,7 @@ namespace ControleMedicamentos.Infra.BancoDados.Tests.ModuloFornecedor
             Assert.IsTrue(vr.IsValid);
 
         }
+
     }
+
 }
